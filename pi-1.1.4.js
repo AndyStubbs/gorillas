@@ -6292,13 +6292,18 @@ function cls( screenData, args ) {
 	width = pi.util.getInt( Math.round( args[ 2 ] ), screenData.width );
 	height = pi.util.getInt( Math.round( args[ 3 ] ), screenData.height );
 
-	screenData.context.clearRect( x, y, width, height );
-	screenData.imageData = null;
-	screenData.printCursor.x = 0;
-	screenData.printCursor.y = 0;
-	screenData.x = 0;
-	screenData.y = 0;
-	screenData.dirty = false;
+	if( x !== 0 && y !== 0 && width !== screenData.width && height !== screenData.height ){
+		screenData.screenObj.render();
+		screenData.context.clearRect( x, y, width, height );
+	} else {
+		screenData.context.clearRect( x, y, width, height );
+		screenData.imageData = null;
+		screenData.printCursor.x = 0;
+		screenData.printCursor.y = 0;
+		screenData.x = 0;
+		screenData.y = 0;
+		screenData.dirty = false;
+	}
 }
 
 pi._.addCommand( "filterImg", filterImg, false, true, [ "filter" ] );

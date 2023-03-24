@@ -1,47 +1,114 @@
 const WIDTH = 640;
 const HEIGHT = 350;
 let gorilla1 = {
+	"name": "Donkey Kong",
 	"x": 48,
 	"y": 50,
 	"leftArmUp": false,
 	"rightArmUp": false,
-	"hand": "right"
+	"hand": "right",
+	"pos": {"row": 1, "col": 1},
+	"score": 0,
+	"lastAngle": null,
+	"lastVelocity": null
 };
 let gorilla2 = {
+	"name": "King Kong",
 	"x": 592,
 	"y": 50,
 	"leftArmUp": false,
 	"rightArmUp": false,
-	"hand": "left"
+	"hand": "left",
+	"pos": {"row": 1, "col": 60},
+	"score": 0,
+	"lastAngle": null,
+	"lastVelocity": null
 };
+let activeGorilla = null;
 let lastBanana = null;
-
-// Initialize our screen
-$.screen({ "aspect": WIDTH + "x" + HEIGHT, "isMultiple": true });
+let wind = 0;
+let numGames = 3;
 
 // Setup our colors
-$.setPalColor( 1, "#0000a8" );	// Blue
-$.setPalColor( 2, "#a8a8a8" );	// Gray
-$.setPalColor( 3, "#a80000" );	// Red
-$.setPalColor( 4, "#00a8a8" );	// Yellow 1
-$.setPalColor( 5, "#fcfc00" );	// Yellow 2
-$.setPalColor( 6, "#fcfc54" );	// Yellow 3
-$.setPalColor( 7, "#fca854" );  // Tan
-$.setPalColor( 8, "#545454" );  // Dark Gray
-$.setPalColor( 9, "#FFFFFF" );
+let colors = [
+	"#0000a8",	// Background Color - Blue - 0
+	"#0000a8",	// Blue					   - 1
+	"#fcfc00",	// Yellow 1				   - 2
+	"#fcfc54",	// Yellow 2				   - 3
+	"#FFFFFF",	// White				   - 4
+	"#00a8a8",  // Cyan					   - 5
+	"#a8a8a8",	// Gray					   - 6
+	"#fca854",	// Tan					   - 7
+	"#545454",	// Dark Gray			   - 8
+	"#a80000",	// Red					   - 9
+	"#a8a8a8",	// Gray					   - 10
+];
+$.setDefaultPal(colors);
 
-startGame();
+// Initialize our screen
+let $screen1 = $.screen({ "aspect": WIDTH + "x" + HEIGHT, "isMultiple": true, willReadFrequently: true });
+let $screen2 = $.screen({ "aspect": WIDTH + "x" + HEIGHT, "isMultiple": true, willReadFrequently: true });
+
+$screen1.setContainerBgColor("black");
+$screen1.setBgColor(1);
+$screen1.setFont(3);
+$.setScreen($screen2);
+$.setFont(3);
+$.setBgColor("rgba(0,0,0,0)");
+
+// Intro screen
+$screen1.setColor(4);
+$screen1.print("\n\n\n\n");
+$screen1.print("Pi.js Gorillas\n\n", false, true);
+$screen1.print("Your mission is to hit your opponent with the exploding", false, true);
+$screen1.print("banana by varying the angle and power of your throw, taking", false, true);
+$screen1.print("int account wind speed, gravity, and the city skyline.", false, true);
+$screen1.print("The wind speed is shown by a directonal arrow at the bottom", false, true);
+$screen1.print("of the playing field, its length relative to its strength.", false, true);
+$screen1.print("\n\n\n\n");
+$screen1.print("Press any key to continue", false, true);
+
+$.onkey("any", "down", function (){
+	$.play("square V60T160O3L8CDEDCDL4ECC");
+	getPlayers();
+}, true);
+
+async function getPlayers() {
+	$screen1.cls();
+	$screen1.setPos(10, 10);
+	gorilla1.name = await $screen1.input("Name of Player 1 (Default = 'Donkey Kong'): ");
+	if(gorilla1.name === "") {
+		gorilla1.name = "Donkey Kong";
+	} else if(gorilla1.name.length > 13) {
+		gorilla1.name = gorilla1.name.substring(0, 13);
+	}
+	$screen1.setPos(10, 12);
+	gorilla2.name = await $screen1.input("Name of Player 2 (Default = 'King Kong'): ");
+	if(gorilla2.name === "") {
+		gorilla2.name = "King Kong";
+	} else if(gorilla2.name.length > 13) {
+		gorilla2.name = gorilla2.name.substring(0, 13);
+	}
+	$screen1.setPos(10, 14);
+	numGames = await $screen1.input("Enter number of games (Default = 3): ");
+	if(isNaN(numGames) || numGames < 1) {
+		numGames = 3;
+	}
+	$screen1.cls();
+	startGame(true);
+}
 
 function drawScene() {
+	$.cls();
+
 	// Draw our scene
-	const BUILDING_COLORS = [2, 3, 4];
+	const BUILDING_COLORS = [6, 5, 9];
 	const BUILDING_SIZE = 32;
 	const MAX_BUILDING_HEIGHT = 250;
 	const MIN_BUILDING_HEIGHT = 100;
-	const WINDOW_COLORS = [6, 8, 6, 6];
+	const WINDOW_COLORS = [3, 8, 3, 3];
 
 	$.setContainerBgColor("black");
-	$.setBgColor(1);
 	let buildingHeight = Math.floor(Math.random() * 150) + 100;
 	for(let x = 0; x < WIDTH; x += BUILDING_SIZE) {
 
@@ -74,11 +141,27 @@ function drawScene() {
 			}
 		}
 	}
+	$.render();
+	$.cls(0, HEIGHT - 10, WIDTH, HEIGHT);
+	$.setColor(9);
+	$.pset(Math.round(WIDTH / 2), HEIGHT - 5);
+	if(wind > 0) {
+		$.draw("R" + wind + "H3 F3 G3");
+	} else {
+		$.draw("L" + (wind * -1) + "E3 G3 F3");
+	}
+	
+	$.render();
+	$.setColor(4);
+	$.setPos(Math.round($.getCols() / 2) - 4, $.getRows() - 3);
+	let px = $.getPosPx();
+	$.cls(px.x - 2, px.y - 1, 76, 15);
+	$.print(gorilla1.score + ">Score<" + gorilla2.score);
 }
 
 function drawSun(isSurprise) {
 	// Draw Rays
-	$.setColor(5);
+	$.setColor(2);
 	let radius = 15;
 	for(let a = 0; a <= 360; a += 22.5) {
 		x = Math.cos((Math.PI / 180) * a) * radius + 320;
@@ -87,7 +170,7 @@ function drawSun(isSurprise) {
 	}
 	
 	// Draw Sun
-	$.circle(320, 20, 10, 5);
+	$.circle(320, 20, 10, 2);
 	
 	// Draw Face
 	$.setColor(1);
@@ -142,59 +225,75 @@ function drawGorilla(gorilla) {
 	$.paint(x2 - 5, y2, 7);
 }
 
-function drawBanana(banana) {
+function createBanana() {
 	let data1 = [
-		[ 0, 6, 6, 0, 0, 0, 0 ],
-		[ 0, 6, 6, 6, 0, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 6, 6, 6, 0, 0, 0 ],
-		[ 0, 6, 6, 0, 0, 0, 0 ],
+		[ 0, 3, 3, 0, 0, 0, 0 ],
+		[ 0, 3, 3, 3, 0, 0, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 3, 3, 3, 0, 0, 0 ],
+		[ 0, 3, 3, 0, 0, 0, 0 ],
 	];
 	let data2 = [
 		[ 0, 0, 0, 0, 0, 0, 0 ],
-		[ 6, 6, 0, 0, 0, 6, 6 ],
-		[ 6, 6, 6, 6, 6, 6, 6 ],
-		[ 0, 6, 6, 6, 6, 6, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
+		[ 3, 3, 0, 0, 0, 3, 3 ],
+		[ 3, 3, 3, 3, 3, 3, 3 ],
+		[ 0, 3, 3, 3, 3, 3, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
 		[ 0, 0, 0, 0, 0, 0, 0 ],
 		[ 0, 0, 0, 0, 0, 0, 0 ],
 	];
 	let data3 = [
-		[ 0, 0, 0, 0, 6, 6, 0 ],
-		[ 0, 0, 0, 6, 6, 6, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 0, 0, 6, 6, 6, 0 ],
-		[ 0, 0, 0, 0, 6, 6, 0 ],
+		[ 0, 0, 0, 0, 3, 3, 0 ],
+		[ 0, 0, 0, 3, 3, 3, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 0, 0, 3, 3, 3, 0 ],
+		[ 0, 0, 0, 0, 3, 3, 0 ],
 	];
 	let data4 = [
 		[ 0, 0, 0, 0, 0, 0, 0 ],
 		[ 0, 0, 0, 0, 0, 0, 0 ],
-		[ 0, 0, 6, 6, 6, 0, 0 ],
-		[ 0, 6, 6, 6, 6, 6, 0 ],
-		[ 6, 6, 6, 6, 6, 6, 6 ],
-		[ 6, 6, 0, 0, 0, 6, 6 ],
+		[ 0, 0, 3, 3, 3, 0, 0 ],
+		[ 0, 3, 3, 3, 3, 3, 0 ],
+		[ 3, 3, 3, 3, 3, 3, 3 ],
+		[ 3, 3, 0, 0, 0, 3, 3 ],
 		[ 0, 0, 0, 0, 0, 0, 0 ],
 	];
-	let data = [ data1, data2, data3, data4 ];
+	let banana = {
+		"data": [ data1, data2, data3, data4 ],
+		"x": 0,
+		"y": 0,
+		"frame": 0
+	};
+	return banana;
+}
+
+function drawBanana(banana) {
 	if(lastBanana) {
 		$.cls(lastBanana.x, lastBanana.y, 7, 7);	
 	}
-	$.put(data[banana.frame % 4], banana.x, banana.y);
+	$.put(banana.data[banana.frame % 4], banana.x, banana.y);
 	lastBanana = {
 		"x": banana.x,
 		"y": banana.y
 	};
 }
 
-function startGame() {
+function startGame(isFirst) {
+	gorilla1.y = 50;
+	gorilla1.lastAngle = null;
+	gorilla1.lastVelocity = null;
+	gorilla2.y = 50;
+	gorilla2.lastAngle = null;
+	gorilla2.lastVelocity = null;
+	wind = Math.floor(Math.random() * 100) - 50;
 	drawScene();
 	gorilla1.y = findBuildingHeight(gorilla1.x, gorilla1.y);
 	gorilla2.y = findBuildingHeight(gorilla2.x, gorilla2.y);
-	updateScene();
+	beginTurn(isFirst);
 }
 
 function findBuildingHeight(x, y) {
@@ -210,83 +309,334 @@ function findBuildingHeight(x, y) {
 	return -1;
 }
 
+function beginTurn(isFirst) {
+	gorilla1.leftArmUp = false;
+	gorilla1.rightArmUp = false;
+	gorilla2.leftArmUp = false;
+	gorilla2.rightArmUp = false;
+	if(isFirst) {
+		activeGorilla = gorilla1;
+	} else if(activeGorilla === gorilla1) {
+		activeGorilla = gorilla2;
+	} else {
+		activeGorilla = gorilla1;
+	}
+	updateScene();
+}
+
 function updateScene() {
+	$screen1.render();
+	$screen1.cls(0, 0, WIDTH, 50);
 	drawGorilla(gorilla1);
 	drawGorilla(gorilla2);
 	drawSun();
-	$.setColor( 9 );
-	$.print(" Player 1", true);
-	$.setPos($.getCols() - 9, 0);
-	$.print("Player 2", true);
-	$.setInputCursor("_");
-	nextTurn(gorilla1, {"row": 1, "col": 1});
+	$screen1.setColor( 4 );
+	$screen1.setPos(0, 0);
+	$screen1.print(" " + gorilla1.name, true);
+	$screen1.setPos($.getCols() - 14, 0);
+	$screen1.print(gorilla2.name, true);
+	$screen1.setInputCursor("_");
+	getPlayerInput(activeGorilla, activeGorilla.pos);
 }
 
-async function nextTurn(gorilla, pos) {
+async function getPlayerInput(gorilla, pos) {
 	let angle = 181;
-	$.setPos(pos);
-	let posPx = $.getPosPx();
+	$screen1.setPos(pos);
+	let posPx = $screen1.getPosPx();
 	while( angle > 180) {
-		$.setPos(pos);
-		$.setColor( 9 );
-		angle = await $.input("Angle: ", null, true, true, false);
+		$screen1.setColor(4);
+		let prompt = "Angle: ";
+		if(gorilla.lastAngle) {
+			prompt = "Angle(" + gorilla.lastAngle + "): ";
+		}
+		$screen1.setPos(pos);
+		angle = await $screen1.input(prompt, null, true, true, false);
 		if( angle > 180 ) {
-			$.cls(0, posPx.y, WIDTH, 50);
-			drawSun();
+			$screen1.cls(0, posPx.y, WIDTH, 50);
 		}
 	}
+	gorilla.lastAngle = angle;
 	let velocity = 200;
 	while(velocity > 199) {
-		$.setPos(pos.col, pos.row + 1);
-		velocity = await $.input("Velocity: ", null, true, true, false);
+		let prompt = "Velocity: ";
+		if(gorilla.lastVelocity) {
+			prompt = "Velocity(" + gorilla.lastVelocity + "): ";
+		}
+		$screen1.setPos(pos.col, pos.row + 1);
+		velocity = await $screen1.input(prompt, null, true, true, false);
 		if( velocity > 199 ) {
-			$.cls(0, posPx.y, WIDTH, 50);
-			drawSun();
-			$.setColor(9);
-			$.setPos(pos);
-			$.print("Angle: " + angle);
+			$screen1.cls(0, posPx.y, WIDTH, 50);
+			$screen1.setColor(4);
+			$screen1.setPos(pos);
+			$screen1.print("Angle: " + angle);
 		}
 	}
+	gorilla.lastVelocity = velocity;
 	throwBanana(gorilla, angle, velocity);
 }
 
 function throwBanana(gorilla, angle, velocity) {
-	let banana = {
-		"y": gorilla.y - 20,
-		"frame": 0
-	};
+	let banana = createBanana();
+	lastBanana = null;
 	if(gorilla.hand === "right") {
 		banana.x = gorilla.x - 16;
+		banana.y = gorilla.y - 22;
 		banana.vx = Math.cos(Math.PI / 180 * -angle) * (velocity / 650);
 		banana.vy = Math.sin(Math.PI / 180 * -angle) * (velocity / 650);
 		gorilla.rightArmUp = true;
 	} else {
-		angle += 90;
-		banana.x = gorilla.x + 6;
+		angle -= 180;
+		banana.x = gorilla.x + 12;
+		banana.y = gorilla.y - 28;
 		banana.vx = Math.cos(Math.PI / 180 * angle) * (velocity / 650);
 		banana.vy = Math.sin(Math.PI / 180 * angle) * (velocity / 650);
 		gorilla.leftArmUp = true;
 	}
-	drawGorilla(gorilla);
-	animateBanana(banana);
+	//$.sound(
+    //	392, 0.25, 0.35, "sawtooth", 0, 0.25, 0
+  	//);
+	$.play("square O3T255C8D8");
+	setTimeout(function () {
+		drawGorilla(gorilla);
+		animateBanana(banana, gorilla);
+	}, 100);
 }
 
-function animateBanana(banana) {
+function animateBanana(banana, gorilla) {
 	let t = new Date().getTime();
+	let startTime = t;
+	let tick = 0;
+	let surprise = false;
+	let armDown = false;
 	let interval = setInterval(function () {
 		let nt = new Date().getTime();
 		let dt = (nt - t);
-		if(dt > 3000) {
-			dt = 3000;
+		if(dt > 100) {
+			dt = 100;
 		}
+		if(!armDown && nt - startTime > 1000) {
+			gorilla.leftArmUp = false;
+			gorilla.rightArmUp = false;
+			drawGorilla(gorilla);
+			armDown = true;
+		}
+		//console.log(dt);
 		t = nt;
 		banana.vy += 0.00005 * dt;
+		banana.vx += (wind * 0.0000003) * dt;
 		banana.x += banana.vx * dt;
 		banana.y += banana.vy * dt;
-		drawSun();
+
+		if(banana.y > HEIGHT + 10 || banana.x > WIDTH + 10 || banana.x < -10 ) {
+			clearInterval(interval);
+			beginTurn();
+			return;
+		}
+
+		// Detect collision
+		let hit = false;
+		let hitGorilla = false;
+		let data = $.get(banana.x, banana.y, banana.x + 6, banana.y + 6);
+		for(let i = 0; i < data.length; i++) {
+			for(let j = 0; j < data[i].length; j++) {
+				if(banana.data[banana.frame][i][j] !== 0) {
+					if(data[i][j] === 7) {
+						// Hit a gorilla
+						hit = true;
+						hitGorilla = true;
+					} else if(data[i][j] === 2) {
+						// Hit the sun
+						surprise = true;
+					} else if(data[i][j] > 4) {
+						// Hit a building
+						hit = true;
+					}
+				}
+			}
+		}
+		drawSun(surprise);
+		if(hit) {
+			clearInterval(interval);
+			animateExplosion(hitGorilla, banana);
+		}
 		drawBanana(banana);
-		banana.frame += 1;
-	}, 60);
+		tick = ( tick + 1 ) % 2;
+		if(tick === 1) {
+			banana.frame = ( banana.frame + 1 ) % 4;
+		}
+	}, 30);
 }
 
+function animateExplosion(hitGorilla, banana) {
+	let size = 1;
+	let lastSize = 0;
+	let maxSize = 12;
+	let ds = 1;
+	let x = banana.x + 2;
+	let y = banana.y + 4;
+	let gorilla;
+	if(hitGorilla) {
+		maxSize *= 4;
+		ds *= 4;
+		if(banana.x > WIDTH / 2) {
+			gorilla1.score += 1;
+			gorilla = gorilla1;
+		} else {
+			gorilla2.score += 1;
+			gorilla = gorilla2;
+		}
+	}
+	playExplosion(hitGorilla);
+	setTimeout(function () {
+		let interval = setInterval(function () {
+			$.setColor(0);
+			for(let i = 0; i < lastSize; i++) {
+				$.circle(x, y, i);
+				$.circle(x + 1, y, i);
+			}
+			$.setColor(9);
+			for(let i = 0; i < size; i++) {
+				$.circle(x, y, i);
+				$.circle(x + 1, y, i);
+			}
+			lastSize = size;
+			size += ds;
+			if(size >= maxSize) {
+				ds *= -1;
+			}
+			if(size <= 0) {
+				clearInterval(interval);
+				if(hitGorilla) {
+					setTimeout(function () {
+						animateDance(gorilla);
+					}, 500);
+				} else {
+					beginTurn();
+				}
+			}
+			//$.render();
+		}, 15);
+	}, 100);
+}
 
+function playExplosion(isBig) {
+	if(isBig) {
+		$.play("SQUARE T100 O3 V40 L16 EFGEFDC");
+	} else {
+		$.play("SQUARE T100 O2 V40 L32 EFGEFDC");
+	}
+}
+
+function animateDance(gorilla) {
+	let ticks = 6;
+	let interval = setInterval(function () {
+		playExplosion();
+		setTimeout(function () {
+			if(gorilla.leftArmUp) {
+				gorilla.leftArmUp = false;
+				gorilla.rightArmUp = true;
+			} else {
+				gorilla.leftArmUp = true;
+				gorilla.rightArmUp = false;
+			}
+			drawGorilla(gorilla);
+		}, 100);
+		ticks -= 1;
+		if(ticks <= 0) {
+			clearInterval(interval);
+			setTimeout(endTurn, 500);
+		}
+	}, 500);
+}
+
+function endTurn() {
+	if(gorilla1.score + gorilla2.score >= numGames) {
+		endGame();
+	} else {
+		startGame();
+	}
+}
+
+function endGame() {
+	let winner = gorilla1;
+	if(gorilla2.score > gorilla1.score) {
+		winner = gorilla2;
+	} else if(gorilla1.score === gorilla2.score) {
+		winner = null;
+	}
+	$screen1.cls();
+	$screen2.cls();
+	$screen1.print("\n\n\n");
+	$screen1.print("GAME OVER!\n", false, true);
+	$screen1.print(" And the winner is ....", false, true);
+	$screen1.print("");
+	$.play(
+		"SQUARE T120 O1 L16 B9 N0 B A A N0 B N0 B A A A N0 B9 N0 B A A N0 B " +
+		"O2 L16 E-9 N0 E-D-D-N0E-N0E-N0E-N0E-D-D-D-N0E-N-E-9N0E-D-D-N0E-" +
+		"O2 L16 B9 N0 B A A N0 G- N0 G- N0 G- E E E N0 O1 B9 N0 B A A N0 B "
+	);
+	setTimeout(function () {
+		if(winner === null) {
+			$screen1.print("It's a tie!\n\n\n\n", false, true);
+			gorilla1.x = 305;
+			gorilla1.y = 155;
+			gorilla1.leftArmUp = true;
+			gorilla1.rightArmUp = false;
+			gorilla2.x = 335;
+			gorilla2.y = 155;
+			gorilla2.leftArmUp = false;
+			gorilla2.rightArmUp = true;
+			drawGorilla(gorilla1);
+			drawGorilla(gorilla2);
+			gorilla1.leftArmUp = false;
+			gorilla1.rightArmUp = false;
+			gorilla2.leftArmUp = false;
+			gorilla2.rightArmUp = false;
+			for(let i = 0; i < 12; i++) {
+				setTimeout(function () {
+					if(i === 7) {
+						gorilla1.leftArmUp = !gorilla1.leftArmUp;
+						gorilla2.rightArmUp = !gorilla2.rightArmUp;
+					}
+					if(i >= 7) {
+						$.play( "SQUARE T160 O2 L32 EFGEFDC" );
+					}
+					setTimeout(function () {
+						gorilla1.leftArmUp = !gorilla1.leftArmUp;
+						gorilla1.rightArmUp = !gorilla1.rightArmUp;
+						gorilla2.leftArmUp = !gorilla2.leftArmUp;
+						gorilla2.rightArmUp = !gorilla2.rightArmUp;
+						drawGorilla(gorilla1);
+						drawGorilla(gorilla2);
+					}, 100);
+				}, 1650 + i * 500);	
+			}
+		} else {
+			$screen1.print(winner.name + "\n\n\n\n", false, true);
+			gorilla1.x = 320;
+			gorilla1.y = 155;
+			gorilla1.leftArmUp = true;
+			gorilla1.rightArmUp = true;
+			drawGorilla(gorilla1);
+			for(let i = 0; i < 12; i++) {
+				setTimeout(function () {
+					if(i === 7) {
+						gorilla1.leftArmUp = !gorilla1.leftArmUp;
+					}
+					if(i >= 7) {
+						$.play( "SQUARE T160 O2 L32 EFGEFDC" );
+					}
+					setTimeout(function () {
+						gorilla1.leftArmUp = !gorilla1.leftArmUp;
+						gorilla1.rightArmUp = !gorilla1.rightArmUp;
+						drawGorilla(gorilla1);
+					}, 100);
+				}, 1650 + i * 500);	
+			}
+		}
+		$screen1.print("Score", false, true);
+		$screen1.print("-".padEnd(17, "-"), false, true);
+		$screen1.print(gorilla1.name.padEnd(13, " ") + String(gorilla1.score).padStart(4), false, true);
+		$screen1.print(gorilla2.name.padEnd(13, " ") + String(gorilla2.score).padStart(4), false, true);
+	}, 3000);
+}
