@@ -28,6 +28,7 @@ let activeGorilla = null;
 let lastBanana = null;
 let wind = 0;
 let numGames = 3;
+let useSound = false;
 
 // Setup our colors
 let colors = [
@@ -55,23 +56,37 @@ $screen1.setFont(3);
 $.setScreen($screen2);
 $.setFont(3);
 $.setBgColor("rgba(0,0,0,0)");
+soundCheck();
+
+async function soundCheck() {
+	$screen1.setColor(4);
+	$screen1.setPos(29, 11);
+	let soundStatus = await $screen1.input("Do you want sound? (y/n): ");
+	useSound = soundStatus.toLowerCase().startsWith("y");
+	intro();
+}
 
 // Intro screen
-$screen1.setColor(4);
-$screen1.print("\n\n\n\n");
-$screen1.print("Pi.js Gorillas\n\n", false, true);
-$screen1.print("Your mission is to hit your opponent with the exploding", false, true);
-$screen1.print("banana by varying the angle and power of your throw, taking", false, true);
-$screen1.print("int account wind speed, gravity, and the city skyline.", false, true);
-$screen1.print("The wind speed is shown by a directonal arrow at the bottom", false, true);
-$screen1.print("of the playing field, its length relative to its strength.", false, true);
-$screen1.print("\n\n\n\n");
-$screen1.print("Press any key to continue", false, true);
+function intro() {
+	$screen1.cls();
+	$screen1.print("\n\n\n\n");
+	$screen1.print("Pi.js Gorillas\n\n", false, true);
+	$screen1.print("Your mission is to hit your opponent with the exploding", false, true);
+	$screen1.print("banana by varying the angle and power of your throw, taking", false, true);
+	$screen1.print("int account wind speed, gravity, and the city skyline.", false, true);
+	$screen1.print("The wind speed is shown by a directonal arrow at the bottom", false, true);
+	$screen1.print("of the playing field, its length relative to its strength.", false, true);
+	$screen1.print("\n\n\n\n");
+	$screen1.print("Press any key to continue", false, true);
 
-$.onkey("any", "down", function (){
-	$.play("square V60T160O3L8CDEDCDL4ECC");
-	getPlayers();
-}, true);
+	if(useSound) {
+		$.play("square V60T160O3L8CDEDCDL4ECC");
+	}
+
+	$.onkey("any", "down", function (){
+		getPlayers();
+	}, true);
+}
 
 async function getPlayers() {
 	$screen1.cls();
@@ -395,7 +410,9 @@ function throwBanana(gorilla, angle, velocity) {
 	//$.sound(
     //	392, 0.25, 0.35, "sawtooth", 0, 0.25, 0
   	//);
-	$.play("square O3T255C8D8");
+	if(useSound) {
+		$.play("square O3T255C8D8");
+	}
 	setTimeout(function () {
 		drawGorilla(gorilla);
 		animateBanana(banana, gorilla);
@@ -520,6 +537,9 @@ function animateExplosion(hitGorilla, banana) {
 }
 
 function playExplosion(isBig) {
+	if(!useSound) {
+		return;
+	}
 	if(isBig) {
 		$.play("SQUARE T100 O3 V40 L16 EFGEFDC");
 	} else {
@@ -570,11 +590,13 @@ function endGame() {
 	$screen1.print("GAME OVER!\n", false, true);
 	$screen1.print(" And the winner is ....", false, true);
 	$screen1.print("");
-	$.play(
-		"SQUARE T120 O1 L16 B9 N0 B A A N0 B N0 B A A A N0 B9 N0 B A A N0 B " +
-		"O2 L16 E-9 N0 E-D-D-N0E-N0E-N0E-N0E-D-D-D-N0E-N-E-9N0E-D-D-N0E-" +
-		"O2 L16 B9 N0 B A A N0 G- N0 G- N0 G- E E E N0 O1 B9 N0 B A A N0 B "
-	);
+	if(useSound) {
+		$.play(
+			"SQUARE T120 O1 L16 B9 N0 B A A N0 B N0 B A A A N0 B9 N0 B A A N0 B " +
+			"O2 L16 E-9 N0 E-D-D-N0E-N0E-N0E-N0E-D-D-D-N0E-N-E-9N0E-D-D-N0E-" +
+			"O2 L16 B9 N0 B A A N0 G- N0 G- N0 G- E E E N0 O1 B9 N0 B A A N0 B "
+		);	
+	}
 	setTimeout(function () {
 		if(winner === null) {
 			$screen1.print("It's a tie!\n\n\n\n", false, true);
@@ -598,7 +620,7 @@ function endGame() {
 						gorilla1.leftArmUp = !gorilla1.leftArmUp;
 						gorilla2.rightArmUp = !gorilla2.rightArmUp;
 					}
-					if(i >= 7) {
+					if(i >= 7 && useSound) {
 						$.play( "SQUARE T160 O2 L32 EFGEFDC" );
 					}
 					setTimeout(function () {
@@ -623,7 +645,7 @@ function endGame() {
 					if(i === 7) {
 						gorilla1.leftArmUp = !gorilla1.leftArmUp;
 					}
-					if(i >= 7) {
+					if(i >= 7 && useSound) {
 						$.play( "SQUARE T160 O2 L32 EFGEFDC" );
 					}
 					setTimeout(function () {
