@@ -36,7 +36,8 @@ You can play the game online at:
 3. **Gameplay Mechanics**:
    - The banana’s trajectory is influenced by wind, displayed at the top of the screen.
    - Players take turns until one gorilla is hit.
-4. **Hint**: Use 45 for angle 90 for velocity as a good starting point.
+4. **Hint 1**: Use 45 for angle 90 for velocity as a good starting point.
+5. **Hint 2**: See the red arrow on bottom of screen for wind adjust your angle and velocity accordingly
 
 ---
 
